@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Generador de iconos · Garaje PWA</title>
+<style>
+  body{font-family:system-ui,sans-serif;max-width:720px;margin:40px auto;padding:20px;
+       background:#f2f4f7;color:#0f172a}
+  h1{margin-bottom:6px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin:24px 0}
+  .card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;
+        text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  .card canvas{display:block;margin:0 auto 10px;border:1px solid #e2e8f0;border-radius:8px}
+  .card b{display:block;font-size:.8rem;color:#64748b;margin-bottom:8px;
+          text-transform:uppercase;letter-spacing:.05em}
+  a.dl{display:inline-block;background:#2563eb;color:#fff;padding:8px 14px;border-radius:8px;
+       text-decoration:none;font-weight:600;font-size:.85rem}
+  a.dl:hover{background:#1d4ed8}
+  .note{background:#e0ebff;border-left:4px solid #2563eb;padding:12px 16px;border-radius:8px;
+        font-size:.9rem;margin-bottom:20px}
+</style>
+</head>
+<body>
+<h1>Generador de iconos PWA</h1>
+<p>Descarga estos 3 archivos PNG y colócalos en la carpeta <code>icons/</code> de tu PWA.</p>
+<div class="note">Consejo: ejecuta este archivo desde la misma carpeta que <code>icons/icon.svg</code>.</div>
+<div class="grid" id="grid"></div>
+
+<script>
+const SIZES = [
+  { size: 192, name: "icon-192.png", maskable: false },
+  { size: 512, name: "icon-512.png", maskable: false },
+  { size: 512, name: "icon-maskable-512.png", maskable: true }
+];
+
+const svgUrl = "icons/icon.svg";
+
+function render(srcImg, size, maskable){
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const ctx = c.getContext("2d");
+
+  if (maskable){
+    // Zona segura: el contenido debe caber en el 80% central
+    const grd = ctx.createLinearGradient(0, 0, size, size);
+    grd.addColorStop(0, "#2563eb");
+    grd.addColorStop(1, "#7c3aed");
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, size, size);
+
+    const inner = size * 0.62;
+    const off = (size - inner) / 2;
+    ctx.drawImage(srcImg, off, off, inner, inner);
+  } else {
+    ctx.drawImage(srcImg, 0, 0, size, size);
+  }
+  return c;
+}
+
+async function go(){
+  const grid = document.getElementById("grid");
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.src = svgUrl;
+
+  await new Promise((res, rej) => {
+    img.onload = res;
+    img.onerror = () => rej(new Error("No se pudo cargar " + svgUrl));
+  });
+
+  SIZES.forEach(({ size, name, maskable }) => {
+    const canvas = render(img, size, maskable);
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `<b>${name}</b>`;
+    const preview = document.createElement("canvas");
+    preview.width = preview.height = Math.min(size, 128);
+    preview.getContext("2d").drawImage(canvas, 0, 0, preview.width, preview.height);
+    card.appendChild(preview);
+
+    const a = document.createElement("a");
+    a.className = "dl";
+    a.textContent = "Descargar (" + size + "×" + size + ")";
+    a.href = canvas.toDataURL("image/png");
+    a.download = name;
+    card.appendChild(a);
+    grid.appendChild(card);
+  });
+}
+go().catch(err => {
+  document.getElementById("grid").innerHTML =
+    `<div class="note" style="background:#fee;border-color:#dc2626;color:#dc2626">
+       Error: ${err.message}<br>
+       Asegúrate de que <code>icons/icon.svg</code> existe y sirves la página desde un servidor local
+       (no desde <code>file://</code>).
+     </div>`;
+});
+</script>
+</body>
+</html>
